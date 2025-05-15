@@ -51,7 +51,7 @@ const ObservationList: React.FC = () => {
     }
     
     // Apply type filter
-    if (typeFilter !== "" && obs.tipo !== typeFilter) {
+    if (typeFilter !== "" && typeFilter !== "all" && obs.tipo !== typeFilter) {
       return false;
     }
     
@@ -149,6 +149,18 @@ const ObservationList: React.FC = () => {
                   <div className="mt-2 text-sm text-muted-foreground">
                     Adicionado por: {obs.autor}
                   </div>
+                  
+                  {/* Ações de observação apenas para coordenação e admin */}
+                  {(user?.role === "coordinator" || user?.role === "admin") && (
+                    <div className="mt-4 flex gap-2 justify-end">
+                      <Button variant="outline" size="sm">
+                        Editar
+                      </Button>
+                      <Button variant="outline" size="sm" className="text-red-500 border-red-500 hover:bg-red-50">
+                        Excluir
+                      </Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             );

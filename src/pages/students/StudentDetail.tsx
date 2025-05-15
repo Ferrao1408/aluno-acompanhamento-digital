@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useStudents } from "@/contexts/StudentContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -42,12 +42,14 @@ type VisibilityType = "coordenacao" | "professores" | "todos";
 const StudentDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getStudent, getObservationsForStudent, deleteStudent, addObservation } = useStudents();
+  const { getStudent, getObservationsForStudent, deleteStudent, addObservation, deleteObservation } = useStudents();
   const { user } = useAuth();
   const { toast } = useToast();
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteObsDialogOpen, setDeleteObsDialogOpen] = useState(false);
+  const [selectedObservation, setSelectedObservation] = useState<string | null>(null);
   const [newObservation, setNewObservation] = useState("");
   const [observationType, setObservationType] = useState<ObservationType>("geral");
   const [visibility, setVisibility] = useState<VisibilityType>("coordenacao");
@@ -65,6 +67,21 @@ const StudentDetail: React.FC = () => {
   }
 
   const observations = getObservationsForStudent(id);
+
+  // Calculate student risk level based on observations
+  const riskAssessment = useMemo(() => {
+    const behaviorCount = observations.filter(obs => obs.tipo === "comportamento").length;
+    
+    if (behaviorCount >= 5) {
+      return { level: "high", label: "Alto", color: "text-red-600 bg-red-50" };
+    } else if (behaviorCount >= 3) {
+      return { level: "medium", label: "Médio", color: "text-orange-600 bg-orange-50" };
+    } else if (behaviorCount >= 1) {
+      return { level: "low", label: "Baixo", color: "text-yellow-600 bg-yellow-50" };
+    } else {
+      return { level: "none", label: "Nenhum", color: "text-green-600 bg-green-50" };
+    }
+  }, [observations]);
 
   // Get student age based on birth date
   const calculateAge = (birthDate: string) => {
@@ -92,6 +109,12 @@ const StudentDetail: React.FC = () => {
     if (user.role === "coordinator" || user.role === "admin") return true;
     if (visibilityLevel === "professores" && user.role === "teacher") return true;
     return false;
+  };
+
+  // Check if user can edit/delete specific observation
+  const canEditObservation = () => {
+    if (!user) return false;
+    return user.role === "coordinator" || user.role === "admin";
   };
 
   // Handle adding new observation
@@ -154,6 +177,33 @@ const StudentDetail: React.FC = () => {
       toast({
         title: "Erro",
         description: "Ocorreu um erro ao excluir o aluno",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Handle observation deletion
+  const handleDeleteObservation = async () => {
+    if (!selectedObservation) return;
+    
+    setIsSubmitting(true);
+    
+    try {
+      await deleteObservation(selectedObservation);
+      setDeleteObsDialogOpen(false);
+      setSelectedObservation(null);
+      
+      toast({
+        title: "Sucesso",
+        description: "Observação excluída com sucesso",
+      });
+    } catch (error) {
+      console.error("Error deleting observation:", error);
+      toast({
+        title: "Erro",
+        description: "Ocorreu um erro ao excluir a observação",
         variant: "destructive",
       });
     } finally {
@@ -318,7 +368,7 @@ const StudentDetail: React.FC = () => {
               </CardContent>
             </Card>
             
-            <Card className="md:col-span-2">
+            <Card>
               <CardHeader>
                 <CardTitle>Responsável</CardTitle>
                 <CardDescription>Informações do responsável legal</CardDescription>
@@ -338,6 +388,61 @@ const StudentDetail: React.FC = () => {
                   <div>
                     <p className="text-sm text-muted-foreground">Telefone</p>
                     <p className="font-medium">{student.telefone}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            {/* Avaliação de risco */}
+            <Card className={riskAssessment.color}>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-6 w-6 mr-2"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                    />
+                  </svg>
+                  Avaliação de Risco
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">Nível de Risco</p>
+                    <p className="text-sm">Baseado em observações de comportamento</p>
+                  </div>
+                  <div className="text-lg font-medium">
+                    {riskAssessment.label}
+                  </div>
+                </div>
+                
+                <div className="mt-4">
+                  <div className="text-sm">
+                    {observations.filter(obs => obs.tipo === "comportamento").length} observação(ões) de comportamento
+                  </div>
+                  
+                  <div className="mt-2 text-sm">
+                    {riskAssessment.level === "high" && (
+                      <p>Requer atenção imediata e acompanhamento contínuo.</p>
+                    )}
+                    {riskAssessment.level === "medium" && (
+                      <p>Recomenda-se acompanhamento regular.</p>
+                    )}
+                    {riskAssessment.level === "low" && (
+                      <p>Situação sob controle, mas manter observação.</p>
+                    )}
+                    {riskAssessment.level === "none" && (
+                      <p>Sem problemas de comportamento registrados.</p>
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -465,7 +570,7 @@ const StudentDetail: React.FC = () => {
                   }
                   
                   return (
-                    <Card key={obs.id}>
+                    <Card key={obs.id} className={obs.tipo === "comportamento" ? "border-yellow-200" : ""}>
                       <CardHeader className="pb-2">
                         <div className="flex justify-between items-start">
                           <div>
@@ -485,8 +590,25 @@ const StudentDetail: React.FC = () => {
                           </div>
                         </div>
                       </CardHeader>
-                      <CardContent className="whitespace-pre-wrap">
-                        {obs.texto}
+                      <CardContent>
+                        <div className="whitespace-pre-wrap mb-3">{obs.texto}</div>
+                        
+                        {/* Ações de observação para usuários com permissão */}
+                        {canEditObservation() && (
+                          <div className="flex justify-end gap-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              className="text-red-500 border-red-500 hover:bg-red-50"
+                              onClick={() => {
+                                setSelectedObservation(obs.id);
+                                setDeleteObsDialogOpen(true);
+                              }}
+                            >
+                              Excluir
+                            </Button>
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
                   );
@@ -496,6 +618,7 @@ const StudentDetail: React.FC = () => {
         </TabsContent>
       </Tabs>
 
+      {/* Dialog para confirmar exclusão de aluno */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -518,6 +641,39 @@ const StudentDetail: React.FC = () => {
               type="button"
               variant="destructive"
               onClick={handleDeleteStudent}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Excluindo..." : "Excluir"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog para confirmar exclusão de observação */}
+      <Dialog open={deleteObsDialogOpen} onOpenChange={setDeleteObsDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar Exclusão</DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja excluir esta observação? Esta ação não pode ser desfeita.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setDeleteObsDialogOpen(false);
+                setSelectedObservation(null);
+              }}
+              disabled={isSubmitting}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleDeleteObservation}
               disabled={isSubmitting}
             >
               {isSubmitting ? "Excluindo..." : "Excluir"}

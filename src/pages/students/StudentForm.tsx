@@ -12,8 +12,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import { Card } from "@/components/ui/card";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 
 interface StudentFormData {
   codigo: string;
@@ -53,6 +59,7 @@ const StudentForm: React.FC = () => {
   
   const [formData, setFormData] = useState<StudentFormData>(defaultFormData);
   const isEditing = !!id;
+  const [activeTab, setActiveTab] = useState("dados-pessoais");
 
   // Load student data if editing
   useEffect(() => {
@@ -154,175 +161,199 @@ const StudentForm: React.FC = () => {
 
       <Card className="p-6">
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Código */}
-            <div className="space-y-2">
-              <label htmlFor="codigo" className="block font-medium">
-                Código
-              </label>
-              <Input
-                id="codigo"
-                name="codigo"
-                value={formData.codigo}
-                onChange={handleChange}
-                placeholder="Ex: 2023001"
-                required
-              />
-            </div>
+          {/* Organizando em seções com Tabs */}
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="mb-6">
+              <TabsTrigger value="dados-pessoais">Dados Pessoais</TabsTrigger>
+              <TabsTrigger value="dados-escolares">Dados Escolares</TabsTrigger>
+              <TabsTrigger value="responsavel">Responsável</TabsTrigger>
+            </TabsList>
+
+            {/* Seção: Dados Pessoais */}
+            <TabsContent value="dados-pessoais" className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Nome */}
+                <div className="space-y-2">
+                  <label htmlFor="nome" className="block font-medium">
+                    Nome Completo
+                  </label>
+                  <Input
+                    id="nome"
+                    name="nome"
+                    value={formData.nome}
+                    onChange={handleChange}
+                    placeholder="Nome completo do aluno"
+                    required
+                  />
+                </div>
+                
+                {/* Data de Nascimento */}
+                <div className="space-y-2">
+                  <label htmlFor="dataNascimento" className="block font-medium">
+                    Data de Nascimento
+                  </label>
+                  <Input
+                    id="dataNascimento"
+                    name="dataNascimento"
+                    type="date"
+                    value={formData.dataNascimento}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+                
+                {/* CPF */}
+                <div className="space-y-2">
+                  <label htmlFor="cpf" className="block font-medium">
+                    CPF
+                  </label>
+                  <Input
+                    id="cpf"
+                    name="cpf"
+                    value={formData.cpf}
+                    onChange={handleChange}
+                    placeholder="Ex: 000.000.000-00"
+                  />
+                </div>
+                
+                {/* Endereço detalhado */}
+                <div className="space-y-2 md:col-span-2">
+                  <label htmlFor="endereco" className="block font-medium">
+                    Endereço Detalhado
+                  </label>
+                  <Input
+                    id="endereco"
+                    name="endereco"
+                    value={formData.endereco}
+                    onChange={handleChange}
+                    placeholder="Endereço completo com CEP, rua, número, bairro, cidade e estado"
+                    required
+                  />
+                </div>
+              </div>
+            </TabsContent>
             
-            {/* Nome */}
-            <div className="space-y-2">
-              <label htmlFor="nome" className="block font-medium">
-                Nome Completo
-              </label>
-              <Input
-                id="nome"
-                name="nome"
-                value={formData.nome}
-                onChange={handleChange}
-                placeholder="Nome completo do aluno"
-                required
-              />
-            </div>
+            {/* Seção: Dados Escolares */}
+            <TabsContent value="dados-escolares" className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Código do aluno */}
+                <div className="space-y-2">
+                  <label htmlFor="codigo" className="block font-medium">
+                    Código do Aluno
+                  </label>
+                  <Input
+                    id="codigo"
+                    name="codigo"
+                    value={formData.codigo}
+                    onChange={handleChange}
+                    placeholder="Ex: 2023001"
+                    required
+                  />
+                </div>
+                
+                {/* Registro da escola */}
+                <div className="space-y-2">
+                  <label htmlFor="registroEscola" className="block font-medium">
+                    Registro na Escola
+                  </label>
+                  <Input
+                    id="registroEscola"
+                    name="registroEscola"
+                    value={formData.registroEscola}
+                    onChange={handleChange}
+                    placeholder="Ex: RE20230001"
+                    required
+                  />
+                </div>
+                
+                {/* Turma */}
+                <div className="space-y-2">
+                  <label htmlFor="turma" className="block font-medium">
+                    Turma
+                  </label>
+                  <Input
+                    id="turma"
+                    name="turma"
+                    value={formData.turma}
+                    onChange={handleChange}
+                    placeholder="Ex: 9ºA"
+                    required
+                  />
+                </div>
+                
+                {/* Período */}
+                <div className="space-y-2">
+                  <label htmlFor="periodo" className="block font-medium">
+                    Período
+                  </label>
+                  <Select
+                    value={formData.periodo}
+                    onValueChange={(value) => handleSelectChange("periodo", value)}
+                  >
+                    <SelectTrigger id="periodo">
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Manhã">Manhã</SelectItem>
+                      <SelectItem value="Tarde">Tarde</SelectItem>
+                      <SelectItem value="Noite">Noite</SelectItem>
+                      <SelectItem value="Integral">Integral</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </TabsContent>
             
-            {/* Turma */}
-            <div className="space-y-2">
-              <label htmlFor="turma" className="block font-medium">
-                Turma
-              </label>
-              <Input
-                id="turma"
-                name="turma"
-                value={formData.turma}
-                onChange={handleChange}
-                placeholder="Ex: 9ºA"
-                required
-              />
-            </div>
-            
-            {/* Período */}
-            <div className="space-y-2">
-              <label htmlFor="periodo" className="block font-medium">
-                Período
-              </label>
-              <Select
-                value={formData.periodo}
-                onValueChange={(value) => handleSelectChange("periodo", value)}
-              >
-                <SelectTrigger id="periodo">
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Manhã">Manhã</SelectItem>
-                  <SelectItem value="Tarde">Tarde</SelectItem>
-                  <SelectItem value="Noite">Noite</SelectItem>
-                  <SelectItem value="Integral">Integral</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            {/* CPF */}
-            <div className="space-y-2">
-              <label htmlFor="cpf" className="block font-medium">
-                CPF
-              </label>
-              <Input
-                id="cpf"
-                name="cpf"
-                value={formData.cpf}
-                onChange={handleChange}
-                placeholder="Ex: 000.000.000-00"
-              />
-            </div>
-            
-            {/* Data de Nascimento */}
-            <div className="space-y-2">
-              <label htmlFor="dataNascimento" className="block font-medium">
-                Data de Nascimento
-              </label>
-              <Input
-                id="dataNascimento"
-                name="dataNascimento"
-                type="date"
-                value={formData.dataNascimento}
-                onChange={handleChange}
-                required
-              />
-            </div>
-            
-            {/* Endereço */}
-            <div className="space-y-2 md:col-span-2">
-              <label htmlFor="endereco" className="block font-medium">
-                Endereço
-              </label>
-              <Input
-                id="endereco"
-                name="endereco"
-                value={formData.endereco}
-                onChange={handleChange}
-                placeholder="Endereço completo"
-                required
-              />
-            </div>
-            
-            {/* Registro na Escola */}
-            <div className="space-y-2">
-              <label htmlFor="registroEscola" className="block font-medium">
-                Registro na Escola
-              </label>
-              <Input
-                id="registroEscola"
-                name="registroEscola"
-                value={formData.registroEscola}
-                onChange={handleChange}
-                placeholder="Ex: RE20230001"
-              />
-            </div>
-            
-            {/* Responsável */}
-            <div className="space-y-2">
-              <label htmlFor="responsavel" className="block font-medium">
-                Responsável
-              </label>
-              <Input
-                id="responsavel"
-                name="responsavel"
-                value={formData.responsavel}
-                onChange={handleChange}
-                placeholder="Nome do responsável"
-                required
-              />
-            </div>
-            
-            {/* CPF do Responsável */}
-            <div className="space-y-2">
-              <label htmlFor="cpfResponsavel" className="block font-medium">
-                CPF do Responsável
-              </label>
-              <Input
-                id="cpfResponsavel"
-                name="cpfResponsavel"
-                value={formData.cpfResponsavel}
-                onChange={handleChange}
-                placeholder="Ex: 000.000.000-00"
-              />
-            </div>
-            
-            {/* Telefone */}
-            <div className="space-y-2">
-              <label htmlFor="telefone" className="block font-medium">
-                Telefone
-              </label>
-              <Input
-                id="telefone"
-                name="telefone"
-                value={formData.telefone}
-                onChange={handleChange}
-                placeholder="Ex: (00) 00000-0000"
-                required
-              />
-            </div>
-          </div>
+            {/* Seção: Responsável */}
+            <TabsContent value="responsavel" className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Responsável */}
+                <div className="space-y-2">
+                  <label htmlFor="responsavel" className="block font-medium">
+                    Nome do Responsável
+                  </label>
+                  <Input
+                    id="responsavel"
+                    name="responsavel"
+                    value={formData.responsavel}
+                    onChange={handleChange}
+                    placeholder="Nome completo do responsável"
+                    required
+                  />
+                </div>
+                
+                {/* CPF do Responsável */}
+                <div className="space-y-2">
+                  <label htmlFor="cpfResponsavel" className="block font-medium">
+                    CPF do Responsável
+                  </label>
+                  <Input
+                    id="cpfResponsavel"
+                    name="cpfResponsavel"
+                    value={formData.cpfResponsavel}
+                    onChange={handleChange}
+                    placeholder="Ex: 000.000.000-00"
+                    required
+                  />
+                </div>
+                
+                {/* Telefone */}
+                <div className="space-y-2">
+                  <label htmlFor="telefone" className="block font-medium">
+                    Telefone
+                  </label>
+                  <Input
+                    id="telefone"
+                    name="telefone"
+                    value={formData.telefone}
+                    onChange={handleChange}
+                    placeholder="Ex: (00) 00000-0000"
+                    required
+                  />
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
           
           <div className="flex justify-end space-x-4 pt-4 border-t">
             <Button
