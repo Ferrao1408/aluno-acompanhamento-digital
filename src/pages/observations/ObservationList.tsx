@@ -95,7 +95,7 @@ const ObservationList: React.FC = () => {
                   <SelectValue placeholder="Filtrar por tipo" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos os tipos</SelectItem>
+                  <SelectItem value="all">Todos os tipos</SelectItem>
                   <SelectItem value="geral">Geral</SelectItem>
                   <SelectItem value="comportamento">Comportamento</SelectItem>
                   <SelectItem value="academico">Acadêmico</SelectItem>

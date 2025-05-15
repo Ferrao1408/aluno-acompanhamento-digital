@@ -91,7 +91,7 @@ const StudentList: React.FC = () => {
                   <SelectValue placeholder="Filtrar por turma" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todas as turmas</SelectItem>
+                  <SelectItem value="all">Todas as turmas</SelectItem>
                   {classes.map((className) => (
                     <SelectItem key={className} value={className}>{className}</SelectItem>
                   ))}
