@@ -42,11 +42,18 @@ const UserList: React.FC = () => {
   const { toast } = useToast();
   const [users, setUsers] = useState(mockUsers);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [newUser, setNewUser] = useState({
     name: "",
     email: "",
     role: "teacher" as "coordinator" | "teacher" | "admin" | "busca_ativa"
   });
+  const [editingUser, setEditingUser] = useState<{
+    id: string;
+    name: string;
+    email: string;
+    role: "coordinator" | "teacher" | "admin" | "busca_ativa";
+  } | null>(null);
 
   // Redirect if not admin
   if (user?.role !== "admin") {
@@ -90,9 +97,39 @@ const UserList: React.FC = () => {
   };
 
   const handleEditUser = (userId: string) => {
-    // In a real app, this would navigate to an edit page or open an edit dialog
+    const userToEdit = users.find(u => u.id === userId);
+    if (userToEdit) {
+      setEditingUser({
+        id: userToEdit.id,
+        name: userToEdit.name,
+        email: userToEdit.email,
+        role: userToEdit.role as "coordinator" | "teacher" | "admin" | "busca_ativa"
+      });
+      setIsEditDialogOpen(true);
+    }
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingUser || !editingUser.name || !editingUser.email) {
+      toast({
+        title: "Erro",
+        description: "Preencha todos os campos obrigatórios.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Update the user in the list
+    setUsers(users.map(u => 
+      u.id === editingUser.id ? { ...editingUser } : u
+    ));
+    
+    setIsEditDialogOpen(false);
+    setEditingUser(null);
+
     toast({
-      description: `Edição do usuário ${userId} será implementada em breve.`,
+      title: "Sucesso",
+      description: "Usuário atualizado com sucesso!",
     });
   };
 
@@ -181,6 +218,75 @@ const UserList: React.FC = () => {
                 Cancelar
               </Button>
               <Button onClick={handleCreateUser}>Criar Usuário</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        
+        {/* Edit User Dialog */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Editar Usuário</DialogTitle>
+              <DialogDescription>
+                Atualize as informações do usuário.
+              </DialogDescription>
+            </DialogHeader>
+            
+            {editingUser && (
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="edit-name" className="text-right">
+                    Nome
+                  </Label>
+                  <Input
+                    id="edit-name"
+                    value={editingUser.name}
+                    onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
+                    className="col-span-3"
+                  />
+                </div>
+                
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="edit-email" className="text-right">
+                    Email
+                  </Label>
+                  <Input
+                    id="edit-email"
+                    value={editingUser.email}
+                    onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
+                    className="col-span-3"
+                  />
+                </div>
+                
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="edit-role" className="text-right">
+                    Perfil
+                  </Label>
+                  <Select
+                    value={editingUser.role}
+                    onValueChange={(value: "coordinator" | "teacher" | "admin" | "busca_ativa") => 
+                      setEditingUser({ ...editingUser, role: value })
+                    }
+                  >
+                    <SelectTrigger className="col-span-3">
+                      <SelectValue placeholder="Selecione um perfil" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="coordinator">Coordenador</SelectItem>
+                      <SelectItem value="teacher">Professor</SelectItem>
+                      <SelectItem value="busca_ativa">Busca Ativa</SelectItem>
+                      <SelectItem value="admin">Administrador</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleSaveEdit}>Salvar Alterações</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
