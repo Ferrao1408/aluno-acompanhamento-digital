@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { StudentProvider } from "./contexts/StudentContext";
+import { ClassProvider } from "./contexts/ClassContext";
 
 // Layouts
 import AppLayout from "./components/layout/AppLayout";
@@ -21,6 +22,9 @@ import ObservationList from "./pages/observations/ObservationList";
 import UserList from "./pages/users/UserList";
 import ReportPage from "./pages/reports/ReportPage";
 import NotFound from "./pages/NotFound";
+import ClassList from "./pages/classes/ClassList";
+import ClassForm from "./pages/classes/ClassForm";
+import ClassDetail from "./pages/classes/ClassDetail";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -38,39 +42,47 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <StudentProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/login" element={<Login />} />
-              
-              {/* Protected Routes */}
-              <Route element={<AppLayout />}>
-                <Route path="/dashboard" element={<Dashboard />} />
+        <ClassProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/login" element={<Login />} />
                 
-                {/* Student Routes */}
-                <Route path="/students" element={<StudentList />} />
-                <Route path="/students/new" element={<StudentForm />} />
-                <Route path="/students/:id" element={<StudentDetail />} />
-                <Route path="/students/edit/:id" element={<StudentForm />} />
+                {/* Protected Routes */}
+                <Route element={<AppLayout />}>
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  
+                  {/* Student Routes */}
+                  <Route path="/students" element={<StudentList />} />
+                  <Route path="/students/new" element={<StudentForm />} />
+                  <Route path="/students/:id" element={<StudentDetail />} />
+                  <Route path="/students/edit/:id" element={<StudentForm />} />
+                  
+                  {/* Class Routes */}
+                  <Route path="/classes" element={<ClassList />} />
+                  <Route path="/classes/new" element={<ClassForm />} />
+                  <Route path="/classes/:id" element={<ClassDetail />} />
+                  <Route path="/classes/edit/:id" element={<ClassForm />} />
+                  
+                  {/* Observation Routes */}
+                  <Route path="/observations" element={<ObservationList />} />
+                  
+                  {/* User Routes */}
+                  <Route path="/users" element={<UserList />} />
+                  
+                  {/* Report Routes */}
+                  <Route path="/reports" element={<ReportPage />} />
+                </Route>
                 
-                {/* Observation Routes */}
-                <Route path="/observations" element={<ObservationList />} />
-                
-                {/* User Routes */}
-                <Route path="/users" element={<UserList />} />
-                
-                {/* Report Routes */}
-                <Route path="/reports" element={<ReportPage />} />
-              </Route>
-              
-              {/* 404 Page */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
+                {/* 404 Page */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </TooltipProvider>
+        </ClassProvider>
       </StudentProvider>
     </AuthProvider>
   </QueryClientProvider>
