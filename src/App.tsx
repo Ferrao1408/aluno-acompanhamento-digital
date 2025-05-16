@@ -18,6 +18,7 @@ import StudentList from "./pages/students/StudentList";
 import StudentForm from "./pages/students/StudentForm";
 import StudentDetail from "./pages/students/StudentDetail";
 import ObservationList from "./pages/observations/ObservationList";
+import UserList from "./pages/users/UserList";
 import ReportPage from "./pages/reports/ReportPage";
 import NotFound from "./pages/NotFound";
 
@@ -47,6 +48,9 @@ const App = () => (
                 
                 {/* Observation Routes */}
                 <Route path="/observations" element={<ObservationList />} />
+                
+                {/* User Routes */}
+                <Route path="/users" element={<UserList />} />
                 
                 {/* Report Routes */}
                 <Route path="/reports" element={<ReportPage />} />

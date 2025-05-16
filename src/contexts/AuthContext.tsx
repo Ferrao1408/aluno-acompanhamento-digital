@@ -2,7 +2,7 @@
 import React, { createContext, useState, useEffect, useContext } from "react";
 
 // Define the user types
-export type UserRole = "coordinator" | "teacher" | "admin";
+export type UserRole = "coordinator" | "teacher" | "admin" | "busca_ativa";
 
 export interface User {
   id: string;
@@ -40,6 +40,20 @@ const mockUsers: User[] = [
     email: "professor@escola.edu.br",
     role: "teacher",
     avatarUrl: "https://i.pravatar.cc/150?img=2",
+  },
+  {
+    id: "3",
+    name: "Equipe Busca Ativa",
+    email: "buscaativa@escola.edu.br",
+    role: "busca_ativa",
+    avatarUrl: "https://i.pravatar.cc/150?img=3",
+  },
+  {
+    id: "4",
+    name: "Administrador Sistema",
+    email: "admin@escola.edu.br",
+    role: "admin",
+    avatarUrl: "https://i.pravatar.cc/150?img=4",
   }
 ];
 

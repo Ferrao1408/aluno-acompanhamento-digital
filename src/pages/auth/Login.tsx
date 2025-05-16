@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState("coordenador@escola.edu.br");
@@ -60,9 +61,22 @@ const Login: React.FC = () => {
     }
   };
 
+  // Demo accounts for quick login
+  const demoAccounts = [
+    { label: "Coordenador", email: "coordenador@escola.edu.br" },
+    { label: "Professor", email: "professor@escola.edu.br" },
+    { label: "Busca Ativa", email: "buscaativa@escola.edu.br" },
+    { label: "Administrador", email: "admin@escola.edu.br" },
+  ];
+
+  const handleDemoAccountSelect = (selectedEmail: string) => {
+    setEmail(selectedEmail);
+    setPassword("123456"); // Demo password is the same for all accounts
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <Card className="w-[350px] shadow-lg animate-fade-in">
+      <Card className="w-[400px] shadow-lg animate-fade-in">
         <CardHeader className="text-center">
           <div className="mx-auto w-16 h-16 bg-app-blue-500 rounded-full flex items-center justify-center mb-4">
             <svg
@@ -113,6 +127,24 @@ const Login: React.FC = () => {
                 placeholder="********"
                 required
               />
+            </div>
+
+            <div className="pt-2 pb-1">
+              <Label>Demo - Selecione um perfil:</Label>
+              <RadioGroup 
+                className="grid grid-cols-2 gap-2 pt-2" 
+                defaultValue={demoAccounts[0].email}
+                onValueChange={handleDemoAccountSelect}
+              >
+                {demoAccounts.map((account) => (
+                  <div key={account.email} className="flex items-center space-x-2">
+                    <RadioGroupItem value={account.email} id={account.email} />
+                    <Label htmlFor={account.email} className="text-sm cursor-pointer">
+                      {account.label}
+                    </Label>
+                  </div>
+                ))}
+              </RadioGroup>
             </div>
           </CardContent>
           
