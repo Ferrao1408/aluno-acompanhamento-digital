@@ -61,12 +61,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Check if user is already logged in
+  // Check if user is already logged in - use sessionStorage instead of localStorage
+  // to prevent issues across multiple tabs/windows
   useEffect(() => {
-    const storedUser = localStorage.getItem("userData");
+    const storedUser = sessionStorage.getItem("userData");
     
     if (storedUser) {
-      setUser(JSON.parse(storedUser));
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (error) {
+        console.error("Failed to parse stored user data:", error);
+        sessionStorage.removeItem("userData");
+      }
     }
     
     setLoading(false);
@@ -87,7 +93,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       setUser(foundUser);
-      localStorage.setItem("userData", JSON.stringify(foundUser));
+      sessionStorage.setItem("userData", JSON.stringify(foundUser));
     } catch (error) {
       console.error("Login failed:", error);
       throw error;
@@ -108,7 +114,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const coordUser = mockUsers[0];
       
       setUser(coordUser);
-      localStorage.setItem("userData", JSON.stringify(coordUser));
+      sessionStorage.setItem("userData", JSON.stringify(coordUser));
     } catch (error) {
       console.error("Google login failed:", error);
       throw error;
@@ -120,20 +126,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Logout function
   const logout = () => {
     setUser(null);
-    localStorage.removeItem("userData");
+    sessionStorage.removeItem("userData");
   };
 
+  // Create a stable context value to prevent unnecessary re-renders
+  const contextValue = React.useMemo(() => ({
+    user,
+    isAuthenticated: !!user,
+    loading,
+    login,
+    loginWithGoogle,
+    logout
+  }), [user, loading]);
+
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isAuthenticated: !!user,
-        loading,
-        login,
-        loginWithGoogle,
-        logout
-      }}
-    >
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );
