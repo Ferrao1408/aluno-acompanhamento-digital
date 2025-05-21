@@ -89,10 +89,17 @@ const ClassForm: React.FC = () => {
           description: "A turma foi atualizada com sucesso.",
         });
       } else {
-        const newClassId = await addClass({
-          ...data,
-          professoresIds: [],
-        });
+        // Fix here: Ensure all required fields are explicitly passed
+        const newClass = {
+          nome: data.nome,
+          serie: data.serie,
+          periodo: data.periodo,
+          turno: data.turno,
+          anoLetivo: data.anoLetivo,
+          professoresIds: [] // Initialize as empty array
+        };
+        
+        const newClassId = await addClass(newClass);
         toast({
           title: "Turma criada",
           description: "A nova turma foi criada com sucesso.",
