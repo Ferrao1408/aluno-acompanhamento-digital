@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useEffect } from "react";
 
 // Define types for student data
@@ -31,10 +30,57 @@ export interface Observation {
   autor: string;
 }
 
+// New types for pedagogical tracking
+export type GoalStatus = "nao_iniciado" | "em_andamento" | "concluido" | "suspenso";
+export type MilestoneType = "avaliacao" | "atividade" | "comportamento" | "academico";
+
+export interface Goal {
+  id: string;
+  planoId: string;
+  titulo: string;
+  descricao: string;
+  dataInicio: string;
+  dataPrevisao: string;
+  dataConclusao?: string;
+  status: GoalStatus;
+  prioridade: "baixa" | "media" | "alta";
+  responsavel: string;
+  observacoes?: string;
+}
+
+export interface Milestone {
+  id: string;
+  planoId: string;
+  titulo: string;
+  descricao: string;
+  data: string;
+  tipo: MilestoneType;
+  autor: string;
+  anexos?: string[];
+}
+
+export interface PedagogicalPlan {
+  id: string;
+  alunoId: string;
+  titulo: string;
+  descricao: string;
+  dataInicio: string;
+  dataFim?: string;
+  ativo: boolean;
+  criador: string;
+  dataCriacao: string;
+  ultimaAtualizacao: string;
+  objetivoGeral: string;
+  observacoes?: string;
+}
+
 // Define context type
 interface StudentContextType {
   students: Student[];
   observations: Observation[];
+  pedagogicalPlans: PedagogicalPlan[];
+  goals: Goal[];
+  milestones: Milestone[];
   loading: boolean;
   addStudent: (student: Omit<Student, "id" | "dataCadastro">) => Promise<void>;
   updateStudent: (id: string, studentData: Partial<Student>) => Promise<void>;
@@ -44,6 +90,22 @@ interface StudentContextType {
   updateObservation: (id: string, data: Partial<Observation>) => Promise<void>;
   deleteObservation: (id: string) => Promise<void>;
   getObservationsForStudent: (studentId: string) => Observation[];
+  // Pedagogical plan methods
+  addPedagogicalPlan: (plan: Omit<PedagogicalPlan, "id" | "dataCriacao" | "ultimaAtualizacao">) => Promise<void>;
+  updatePedagogicalPlan: (id: string, data: Partial<PedagogicalPlan>) => Promise<void>;
+  deletePedagogicalPlan: (id: string) => Promise<void>;
+  getPedagogicalPlansForStudent: (studentId: string) => PedagogicalPlan[];
+  getActivePlanForStudent: (studentId: string) => PedagogicalPlan | undefined;
+  // Goal methods
+  addGoal: (goal: Omit<Goal, "id">) => Promise<void>;
+  updateGoal: (id: string, data: Partial<Goal>) => Promise<void>;
+  deleteGoal: (id: string) => Promise<void>;
+  getGoalsForPlan: (planId: string) => Goal[];
+  // Milestone methods
+  addMilestone: (milestone: Omit<Milestone, "id">) => Promise<void>;
+  updateMilestone: (id: string, data: Partial<Milestone>) => Promise<void>;
+  deleteMilestone: (id: string) => Promise<void>;
+  getMilestonesForPlan: (planId: string) => Milestone[];
 }
 
 // Create context
@@ -128,28 +190,112 @@ const sampleObservations: Observation[] = [
   }
 ];
 
+// Sample pedagogical data
+const samplePedagogicalPlans: PedagogicalPlan[] = [
+  {
+    id: "plan1",
+    alunoId: "2",
+    titulo: "Plano de Reforço em Matemática",
+    descricao: "Plano específico para melhorar o desempenho em matemática",
+    dataInicio: "2024-01-15T00:00:00Z",
+    ativo: true,
+    criador: "Professor Costa",
+    dataCriacao: "2024-01-10T10:00:00Z",
+    ultimaAtualizacao: "2024-01-15T10:00:00Z",
+    objetivoGeral: "Melhorar o aproveitamento em operações básicas e resolução de problemas"
+  }
+];
+
+const sampleGoals: Goal[] = [
+  {
+    id: "goal1",
+    planoId: "plan1",
+    titulo: "Dominar tabuada até 10",
+    descricao: "Aluno deve conseguir responder a tabuada de 1 a 10 sem hesitação",
+    dataInicio: "2024-01-15T00:00:00Z",
+    dataPrevisao: "2024-02-15T00:00:00Z",
+    status: "em_andamento",
+    prioridade: "alta",
+    responsavel: "Professor Costa"
+  },
+  {
+    id: "goal2",
+    planoId: "plan1",
+    titulo: "Resolver problemas básicos",
+    descricao: "Conseguir resolver problemas de adição e subtração com duas operações",
+    dataInicio: "2024-02-01T00:00:00Z",
+    dataPrevisao: "2024-03-01T00:00:00Z",
+    status: "nao_iniciado",
+    prioridade: "media",
+    responsavel: "Professor Costa"
+  }
+];
+
+const sampleMilestones: Milestone[] = [
+  {
+    id: "milestone1",
+    planoId: "plan1",
+    titulo: "Avaliação inicial de matemática",
+    descricao: "Teste diagnóstico para identificar deficiências",
+    data: "2024-01-15T14:00:00Z",
+    tipo: "avaliacao",
+    autor: "Professor Costa"
+  },
+  {
+    id: "milestone2",
+    planoId: "plan1",
+    titulo: "Primeira semana de exercícios",
+    descricao: "Conclusão da primeira semana de atividades de reforço",
+    data: "2024-01-22T16:00:00Z",
+    tipo: "atividade",
+    autor: "Professor Costa"
+  }
+];
+
 export const StudentProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [students, setStudents] = useState<Student[]>(sampleStudents);
   const [observations, setObservations] = useState<Observation[]>(sampleObservations);
+  const [pedagogicalPlans, setPedagogicalPlans] = useState<PedagogicalPlan[]>(samplePedagogicalPlans);
+  const [goals, setGoals] = useState<Goal[]>(sampleGoals);
+  const [milestones, setMilestones] = useState<Milestone[]>(sampleMilestones);
   const [loading, setLoading] = useState(false);
 
   // Load data from localStorage on mount
   useEffect(() => {
     const storedStudents = localStorage.getItem("students");
     const storedObservations = localStorage.getItem("observations");
+    const storedPlans = localStorage.getItem("pedagogicalPlans");
+    const storedGoals = localStorage.getItem("goals");
+    const storedMilestones = localStorage.getItem("milestones");
     
     if (storedStudents) {
       setStudents(JSON.parse(storedStudents));
     } else {
-      // Initialize with sample data
       localStorage.setItem("students", JSON.stringify(sampleStudents));
     }
     
     if (storedObservations) {
       setObservations(JSON.parse(storedObservations));
     } else {
-      // Initialize with sample data
       localStorage.setItem("observations", JSON.stringify(sampleObservations));
+    }
+
+    if (storedPlans) {
+      setPedagogicalPlans(JSON.parse(storedPlans));
+    } else {
+      localStorage.setItem("pedagogicalPlans", JSON.stringify(samplePedagogicalPlans));
+    }
+
+    if (storedGoals) {
+      setGoals(JSON.parse(storedGoals));
+    } else {
+      localStorage.setItem("goals", JSON.stringify(sampleGoals));
+    }
+
+    if (storedMilestones) {
+      setMilestones(JSON.parse(storedMilestones));
+    } else {
+      localStorage.setItem("milestones", JSON.stringify(sampleMilestones));
     }
   }, []);
 
@@ -161,6 +307,18 @@ export const StudentProvider: React.FC<{ children: React.ReactNode }> = ({ child
   useEffect(() => {
     localStorage.setItem("observations", JSON.stringify(observations));
   }, [observations]);
+
+  useEffect(() => {
+    localStorage.setItem("pedagogicalPlans", JSON.stringify(pedagogicalPlans));
+  }, [pedagogicalPlans]);
+
+  useEffect(() => {
+    localStorage.setItem("goals", JSON.stringify(goals));
+  }, [goals]);
+
+  useEffect(() => {
+    localStorage.setItem("milestones", JSON.stringify(milestones));
+  }, [milestones]);
 
   // Student CRUD operations
   const addStudent = async (studentData: Omit<Student, "id" | "dataCadastro">) => {
@@ -219,6 +377,15 @@ export const StudentProvider: React.FC<{ children: React.ReactNode }> = ({ child
       
       // Delete all observations for this student
       setObservations(prev => prev.filter(obs => obs.alunoId !== id));
+      
+      // Delete all pedagogical plans for this student
+      const studentPlans = pedagogicalPlans.filter(plan => plan.alunoId === id);
+      setPedagogicalPlans(prev => prev.filter(plan => plan.alunoId !== id));
+      
+      // Delete all goals and milestones for these plans
+      const planIds = studentPlans.map(plan => plan.id);
+      setGoals(prev => prev.filter(goal => !planIds.includes(goal.planoId)));
+      setMilestones(prev => prev.filter(milestone => !planIds.includes(milestone.planoId)));
       
       return;
     } catch (error) {
@@ -298,11 +465,218 @@ export const StudentProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return observations.filter(obs => obs.alunoId === studentId);
   };
 
+  // Pedagogical Plan CRUD operations
+  const addPedagogicalPlan = async (planData: Omit<PedagogicalPlan, "id" | "dataCriacao" | "ultimaAtualizacao">) => {
+    setLoading(true);
+    
+    try {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      const newPlan: PedagogicalPlan = {
+        ...planData,
+        id: `plan${Date.now()}`,
+        dataCriacao: new Date().toISOString(),
+        ultimaAtualizacao: new Date().toISOString()
+      };
+      
+      setPedagogicalPlans(prev => [...prev, newPlan]);
+      return;
+    } catch (error) {
+      console.error("Error adding pedagogical plan:", error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updatePedagogicalPlan = async (id: string, data: Partial<PedagogicalPlan>) => {
+    setLoading(true);
+    
+    try {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      setPedagogicalPlans(prev =>
+        prev.map(plan =>
+          plan.id === id
+            ? { ...plan, ...data, ultimaAtualizacao: new Date().toISOString() }
+            : plan
+        )
+      );
+      
+      return;
+    } catch (error) {
+      console.error("Error updating pedagogical plan:", error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deletePedagogicalPlan = async (id: string) => {
+    setLoading(true);
+    
+    try {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      setPedagogicalPlans(prev => prev.filter(plan => plan.id !== id));
+      setGoals(prev => prev.filter(goal => goal.planoId !== id));
+      setMilestones(prev => prev.filter(milestone => milestone.planoId !== id));
+      
+      return;
+    } catch (error) {
+      console.error("Error deleting pedagogical plan:", error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getPedagogicalPlansForStudent = (studentId: string) => {
+    return pedagogicalPlans.filter(plan => plan.alunoId === studentId);
+  };
+
+  const getActivePlanForStudent = (studentId: string) => {
+    return pedagogicalPlans.find(plan => plan.alunoId === studentId && plan.ativo);
+  };
+
+  // Goal CRUD operations
+  const addGoal = async (goalData: Omit<Goal, "id">) => {
+    setLoading(true);
+    
+    try {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      const newGoal: Goal = {
+        ...goalData,
+        id: `goal${Date.now()}`
+      };
+      
+      setGoals(prev => [...prev, newGoal]);
+      return;
+    } catch (error) {
+      console.error("Error adding goal:", error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateGoal = async (id: string, data: Partial<Goal>) => {
+    setLoading(true);
+    
+    try {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      setGoals(prev =>
+        prev.map(goal =>
+          goal.id === id
+            ? { ...goal, ...data }
+            : goal
+        )
+      );
+      
+      return;
+    } catch (error) {
+      console.error("Error updating goal:", error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteGoal = async (id: string) => {
+    setLoading(true);
+    
+    try {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      setGoals(prev => prev.filter(goal => goal.id !== id));
+      return;
+    } catch (error) {
+      console.error("Error deleting goal:", error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getGoalsForPlan = (planId: string) => {
+    return goals.filter(goal => goal.planoId === planId);
+  };
+
+  // Milestone CRUD operations
+  const addMilestone = async (milestoneData: Omit<Milestone, "id">) => {
+    setLoading(true);
+    
+    try {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      const newMilestone: Milestone = {
+        ...milestoneData,
+        id: `milestone${Date.now()}`
+      };
+      
+      setMilestones(prev => [...prev, newMilestone]);
+      return;
+    } catch (error) {
+      console.error("Error adding milestone:", error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateMilestone = async (id: string, data: Partial<Milestone>) => {
+    setLoading(true);
+    
+    try {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      setMilestones(prev =>
+        prev.map(milestone =>
+          milestone.id === id
+            ? { ...milestone, ...data }
+            : milestone
+        )
+      );
+      
+      return;
+    } catch (error) {
+      console.error("Error updating milestone:", error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteMilestone = async (id: string) => {
+    setLoading(true);
+    
+    try {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      setMilestones(prev => prev.filter(milestone => milestone.id !== id));
+      return;
+    } catch (error) {
+      console.error("Error deleting milestone:", error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getMilestonesForPlan = (planId: string) => {
+    return milestones.filter(milestone => milestone.planoId === planId);
+  };
+
   return (
     <StudentContext.Provider
       value={{
         students,
         observations,
+        pedagogicalPlans,
+        goals,
+        milestones,
         loading,
         addStudent,
         updateStudent,
@@ -311,7 +685,20 @@ export const StudentProvider: React.FC<{ children: React.ReactNode }> = ({ child
         addObservation,
         updateObservation,
         deleteObservation,
-        getObservationsForStudent
+        getObservationsForStudent,
+        addPedagogicalPlan,
+        updatePedagogicalPlan,
+        deletePedagogicalPlan,
+        getPedagogicalPlansForStudent,
+        getActivePlanForStudent,
+        addGoal,
+        updateGoal,
+        deleteGoal,
+        getGoalsForPlan,
+        addMilestone,
+        updateMilestone,
+        deleteMilestone,
+        getMilestonesForPlan
       }}
     >
       {children}

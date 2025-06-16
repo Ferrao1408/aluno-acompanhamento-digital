@@ -26,6 +26,11 @@ import ClassList from "./pages/classes/ClassList";
 import ClassForm from "./pages/classes/ClassForm";
 import ClassDetail from "./pages/classes/ClassDetail";
 
+// Pedagogical pages
+import PedagogicalPlanList from "./pages/pedagogical/PedagogicalPlanList";
+import PedagogicalPlanForm from "./pages/pedagogical/PedagogicalPlanForm";
+import PedagogicalPlanDetail from "./pages/pedagogical/PedagogicalPlanDetail";
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -66,6 +71,12 @@ const App = () => (
                   <Route path="/classes/new" element={<ClassForm />} />
                   <Route path="/classes/:id" element={<ClassDetail />} />
                   <Route path="/classes/edit/:id" element={<ClassForm />} />
+                  
+                  {/* Pedagogical Routes */}
+                  <Route path="/pedagogical" element={<PedagogicalPlanList />} />
+                  <Route path="/pedagogical/new" element={<PedagogicalPlanForm />} />
+                  <Route path="/pedagogical/:id" element={<PedagogicalPlanDetail />} />
+                  <Route path="/pedagogical/edit/:id" element={<PedagogicalPlanForm />} />
                   
                   {/* Observation Routes */}
                   <Route path="/observations" element={<ObservationList />} />

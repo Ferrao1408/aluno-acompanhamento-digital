@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useStudents } from "@/contexts/StudentContext";
@@ -34,7 +33,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { BookOpen, Target, Calendar } from "lucide-react";
 
 type ObservationType = "geral" | "comportamento" | "academico" | "atendimento" | "saude";
 type VisibilityType = "coordenacao" | "professores" | "todos";
@@ -42,7 +43,16 @@ type VisibilityType = "coordenacao" | "professores" | "todos";
 const StudentDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getStudent, getObservationsForStudent, deleteStudent, addObservation, deleteObservation } = useStudents();
+  const { 
+    getStudent, 
+    getObservationsForStudent, 
+    deleteStudent, 
+    addObservation, 
+    deleteObservation,
+    getActivePlanForStudent,
+    getPedagogicalPlansForStudent,
+    getGoalsForPlan
+  } = useStudents();
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -67,6 +77,8 @@ const StudentDetail: React.FC = () => {
   }
 
   const observations = getObservationsForStudent(id);
+  const activePlan = getActivePlanForStudent(id);
+  const allPlans = getPedagogicalPlansForStudent(id);
 
   // Calculate student risk level based on observations
   const riskAssessment = useMemo(() => {
@@ -297,6 +309,7 @@ const StudentDetail: React.FC = () => {
         <TabsList className="mb-6">
           <TabsTrigger value="info">Informações</TabsTrigger>
           <TabsTrigger value="observations">Observações ({observations.length})</TabsTrigger>
+          <TabsTrigger value="pedagogical">Acompanhamento Pedagógico</TabsTrigger>
         </TabsList>
 
         <TabsContent value="info" className="animate-fade-in">
@@ -615,6 +628,126 @@ const StudentDetail: React.FC = () => {
                 })}
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="pedagogical" className="animate-fade-in">
+          <div className="space-y-6">
+            {/* Active Plan Section */}
+            {activePlan ? (
+              <Card>
+                <CardHeader>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <CardTitle className="flex items-center text-green-700">
+                        <BookOpen className="h-5 w-5 mr-2" />
+                        Plano Ativo
+                      </CardTitle>
+                      <CardDescription>Acompanhamento pedagógico em andamento</CardDescription>
+                    </div>
+                    <Badge className="bg-green-100 text-green-800">Ativo</Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="font-semibold text-lg">{activePlan.titulo}</h3>
+                      <p className="text-muted-foreground">{activePlan.descricao}</p>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="font-medium">Objetivo:</span>
+                        <p className="text-muted-foreground">{activePlan.objetivoGeral}</p>
+                      </div>
+                      <div>
+                        <span className="font-medium">Início:</span>
+                        <p className="text-muted-foreground">{formatDate(activePlan.dataInicio)}</p>
+                      </div>
+                      <div>
+                        <span className="font-medium">Criado por:</span>
+                        <p className="text-muted-foreground">{activePlan.criador}</p>
+                      </div>
+                      <div>
+                        <span className="font-medium">Metas:</span>
+                        <p className="text-muted-foreground">
+                          {(() => {
+                            const goals = getGoalsForPlan(activePlan.id);
+                            const completed = goals.filter(g => g.status === "concluido").length;
+                            return `${completed}/${goals.length} concluídas`;
+                          })()}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex justify-end">
+                      <Link to={`/pedagogical/${activePlan.id}`}>
+                        <Button variant="outline">
+                          <Target className="h-4 w-4 mr-2" />
+                          Ver Detalhes do Plano
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardContent className="pt-6 text-center">
+                  <BookOpen className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">Nenhum Plano Ativo</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Este aluno não possui um plano pedagógico ativo no momento.
+                  </p>
+                  {(user?.role === "coordinator" || user?.role === "admin") && (
+                    <Link to={`/pedagogical/new?student=${id}`}>
+                      <Button>
+                        <BookOpen className="h-4 w-4 mr-2" />
+                        Criar Plano Pedagógico
+                      </Button>
+                    </Link>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Historical Plans */}
+            {allPlans.length > 1 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Calendar className="h-5 w-5 mr-2" />
+                    Histórico de Planos
+                  </CardTitle>
+                  <CardDescription>Planos pedagógicos anteriores</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {allPlans
+                      .filter(plan => !plan.ativo)
+                      .sort((a, b) => new Date(b.dataInicio).getTime() - new Date(a.dataInicio).getTime())
+                      .map((plan) => (
+                        <div key={plan.id} className="flex justify-between items-center p-4 border rounded-lg">
+                          <div>
+                            <h4 className="font-medium">{plan.titulo}</h4>
+                            <p className="text-sm text-muted-foreground">
+                              {formatDate(plan.dataInicio)} - {plan.dataFim ? formatDate(plan.dataFim) : "Indefinido"}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="secondary">Inativo</Badge>
+                            <Link to={`/pedagogical/${plan.id}`}>
+                              <Button variant="outline" size="sm">
+                                Ver Detalhes
+                              </Button>
+                            </Link>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </TabsContent>
       </Tabs>
 
