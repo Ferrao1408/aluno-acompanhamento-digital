@@ -5,6 +5,7 @@ import { useStudents } from "@/contexts/StudentContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CPFInput } from "@/components/ui/cpf-input";
 import {
   Select,
   SelectContent,
@@ -20,6 +21,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
+import { isValidCPF, checkCPFDuplicate } from "@/utils/cpfValidator";
 
 interface StudentFormData {
   codigo: string;
@@ -39,7 +41,7 @@ const StudentForm: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { addStudent, updateStudent, getStudent } = useStudents();
+  const { addStudent, updateStudent, getStudent, students } = useStudents();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -108,14 +110,77 @@ const StudentForm: React.FC = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  // Handle CPF changes
+  const handleCPFChange = (field: 'cpf' | 'cpfResponsavel') => (value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
   // Handle select changes
   const handleSelectChange = (name: keyof StudentFormData, value: string) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  // Validate form before submission
+  const validateForm = (): boolean => {
+    // Check required fields
+    if (!formData.nome || !formData.codigo || !formData.turma || !formData.responsavel) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Por favor, preencha todos os campos obrigatórios",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    // Validate CPFs if provided
+    if (formData.cpf && !isValidCPF(formData.cpf)) {
+      toast({
+        title: "CPF inválido",
+        description: "O CPF do aluno não é válido",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    if (formData.cpfResponsavel && !isValidCPF(formData.cpfResponsavel)) {
+      toast({
+        title: "CPF inválido",
+        description: "O CPF do responsável não é válido",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    // Check for duplicates
+    const cpfDuplicate = checkCPFDuplicate(formData.cpf, students, isEditing ? id : undefined);
+    if (cpfDuplicate) {
+      toast({
+        title: "CPF duplicado",
+        description: cpfDuplicate,
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    const cpfResponsavelDuplicate = checkCPFDuplicate(formData.cpfResponsavel, students, isEditing ? id : undefined);
+    if (cpfResponsavelDuplicate) {
+      toast({
+        title: "CPF duplicado",
+        description: cpfResponsavelDuplicate,
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    return true;
+  };
+
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!validateForm()) return;
+    
     setIsSubmitting(true);
     
     try {
@@ -161,7 +226,6 @@ const StudentForm: React.FC = () => {
 
       <Card className="p-6">
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Organizando em seções com Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="mb-6">
               <TabsTrigger value="dados-pessoais">Dados Pessoais</TabsTrigger>
@@ -175,7 +239,7 @@ const StudentForm: React.FC = () => {
                 {/* Nome */}
                 <div className="space-y-2">
                   <label htmlFor="nome" className="block font-medium">
-                    Nome Completo
+                    Nome Completo <span className="text-red-500">*</span>
                   </label>
                   <Input
                     id="nome"
@@ -202,19 +266,16 @@ const StudentForm: React.FC = () => {
                   />
                 </div>
                 
-                {/* CPF */}
-                <div className="space-y-2">
-                  <label htmlFor="cpf" className="block font-medium">
-                    CPF
-                  </label>
-                  <Input
-                    id="cpf"
-                    name="cpf"
-                    value={formData.cpf}
-                    onChange={handleChange}
-                    placeholder="Ex: 000.000.000-00"
-                  />
-                </div>
+                {/* CPF com validação */}
+                <CPFInput
+                  id="cpf"
+                  name="cpf"
+                  label="CPF do Aluno"
+                  value={formData.cpf}
+                  onChange={handleCPFChange('cpf')}
+                  students={students}
+                  currentStudentId={isEditing ? id : undefined}
+                />
                 
                 {/* Endereço detalhado */}
                 <div className="space-y-2 md:col-span-2">
@@ -239,7 +300,7 @@ const StudentForm: React.FC = () => {
                 {/* Código do aluno */}
                 <div className="space-y-2">
                   <label htmlFor="codigo" className="block font-medium">
-                    Código do Aluno
+                    Código do Aluno <span className="text-red-500">*</span>
                   </label>
                   <Input
                     id="codigo"
@@ -269,7 +330,7 @@ const StudentForm: React.FC = () => {
                 {/* Turma */}
                 <div className="space-y-2">
                   <label htmlFor="turma" className="block font-medium">
-                    Turma
+                    Turma <span className="text-red-500">*</span>
                   </label>
                   <Input
                     id="turma"
@@ -310,7 +371,7 @@ const StudentForm: React.FC = () => {
                 {/* Responsável */}
                 <div className="space-y-2">
                   <label htmlFor="responsavel" className="block font-medium">
-                    Nome do Responsável
+                    Nome do Responsável <span className="text-red-500">*</span>
                   </label>
                   <Input
                     id="responsavel"
@@ -322,20 +383,17 @@ const StudentForm: React.FC = () => {
                   />
                 </div>
                 
-                {/* CPF do Responsável */}
-                <div className="space-y-2">
-                  <label htmlFor="cpfResponsavel" className="block font-medium">
-                    CPF do Responsável
-                  </label>
-                  <Input
-                    id="cpfResponsavel"
-                    name="cpfResponsavel"
-                    value={formData.cpfResponsavel}
-                    onChange={handleChange}
-                    placeholder="Ex: 000.000.000-00"
-                    required
-                  />
-                </div>
+                {/* CPF do Responsável com validação */}
+                <CPFInput
+                  id="cpfResponsavel"
+                  name="cpfResponsavel"
+                  label="CPF do Responsável"
+                  value={formData.cpfResponsavel}
+                  onChange={handleCPFChange('cpfResponsavel')}
+                  students={students}
+                  currentStudentId={isEditing ? id : undefined}
+                  required
+                />
                 
                 {/* Telefone */}
                 <div className="space-y-2">
