@@ -17,6 +17,7 @@ import Login from "./pages/auth/Login";
 import Dashboard from "./pages/dashboard/Dashboard";
 import StudentList from "./pages/students/StudentList";
 import StudentForm from "./pages/students/StudentForm";
+import StudentBulkImport from "./pages/students/StudentBulkImport";
 import StudentDetail from "./pages/students/StudentDetail";
 import ObservationList from "./pages/observations/ObservationList";
 import UserList from "./pages/users/UserList";
@@ -63,6 +64,7 @@ const App = () => (
                   {/* Student Routes */}
                   <Route path="/students" element={<StudentList />} />
                   <Route path="/students/new" element={<StudentForm />} />
+                  <Route path="/students/bulk-import" element={<StudentBulkImport />} />
                   <Route path="/students/:id" element={<StudentDetail />} />
                   <Route path="/students/edit/:id" element={<StudentForm />} />
                   
