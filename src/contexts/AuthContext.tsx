@@ -1,10 +1,12 @@
 
 import React, { createContext, useState, useEffect, useContext } from "react";
+import { User as SupabaseUser, Session } from '@supabase/supabase-js';
+import { supabase } from "@/integrations/supabase/client";
 
 // Define the user types
 export type UserRole = "coordinator" | "teacher" | "admin" | "busca_ativa";
 
-export interface User {
+export interface UserProfile {
   id: string;
   name: string;
   email: string;
@@ -12,12 +14,16 @@ export interface User {
   avatarUrl?: string;
 }
 
+// Export User as alias for backward compatibility
+export type User = UserProfile;
+
 // Define the context type
 interface AuthContextType {
-  user: User | null;
+  user: UserProfile | null;
   isAuthenticated: boolean;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string, name: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   logout: () => void;
 }
@@ -25,75 +31,73 @@ interface AuthContextType {
 // Create the context
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Mock users for development (to be replaced with real authentication)
-const mockUsers: User[] = [
-  {
-    id: "1",
-    name: "Coordenador Escolar",
-    email: "coordenador@escola.edu.br",
-    role: "coordinator",
-    avatarUrl: "https://i.pravatar.cc/150?img=1",
-  },
-  {
-    id: "2",
-    name: "Professor Silva",
-    email: "professor@escola.edu.br",
-    role: "teacher",
-    avatarUrl: "https://i.pravatar.cc/150?img=2",
-  },
-  {
-    id: "3",
-    name: "Equipe Busca Ativa",
-    email: "buscaativa@escola.edu.br",
-    role: "busca_ativa",
-    avatarUrl: "https://i.pravatar.cc/150?img=3",
-  },
-  {
-    id: "4",
-    name: "Administrador Sistema",
-    email: "admin@escola.edu.br",
-    role: "admin",
-    avatarUrl: "https://i.pravatar.cc/150?img=4",
-  }
-];
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Check if user is already logged in - use sessionStorage instead of localStorage
-  // to prevent issues across multiple tabs/windows
+  // Set up auth state listener and get initial session
   useEffect(() => {
-    const storedUser = sessionStorage.getItem("userData");
-    
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (error) {
-        console.error("Failed to parse stored user data:", error);
-        sessionStorage.removeItem("userData");
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setSession(session);
+        
+        if (session?.user) {
+          // Fetch user profile and role from our custom tables
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+            
+          const { data: userRole } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', session.user.id)
+            .single();
+
+          if (profile && userRole) {
+            setUser({
+              id: profile.id,
+              name: profile.name,
+              email: session.user.email || '',
+              role: userRole.role as UserRole,
+              avatarUrl: profile.avatar_url
+            });
+          }
+        } else {
+          setUser(null);
+        }
+        
+        setLoading(false);
       }
-    }
-    
-    setLoading(false);
+    );
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        // The onAuthStateChange will handle setting the user data
+        setSession(session);
+      } else {
+        setLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  // Mock login function (to be replaced with real API call)
+  // Real login function
   const login = async (email: string, password: string) => {
     setLoading(true);
     
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const foundUser = mockUsers.find(u => u.email === email);
-      
-      if (!foundUser) {
-        throw new Error("Usuário não encontrado");
-      }
-      
-      setUser(foundUser);
-      sessionStorage.setItem("userData", JSON.stringify(foundUser));
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
     } catch (error) {
       console.error("Login failed:", error);
       throw error;
@@ -102,19 +106,48 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Mock Google login
+  // Sign up function
+  const signUp = async (email: string, password: string, name: string) => {
+    setLoading(true);
+    
+    try {
+      const redirectUrl = `${window.location.origin}/`;
+      
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: redirectUrl,
+          data: {
+            name: name
+          }
+        }
+      });
+
+      if (error) throw error;
+    } catch (error) {
+      console.error("Sign up failed:", error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Google login
   const loginWithGoogle = async () => {
     setLoading(true);
     
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const redirectUrl = `${window.location.origin}/`;
       
-      // For demo purposes, just login as coordinator
-      const coordUser = mockUsers[0];
-      
-      setUser(coordUser);
-      sessionStorage.setItem("userData", JSON.stringify(coordUser));
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: redirectUrl
+        }
+      });
+
+      if (error) throw error;
     } catch (error) {
       console.error("Google login failed:", error);
       throw error;
@@ -124,20 +157,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Logout function
-  const logout = () => {
+  const logout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
-    sessionStorage.removeItem("userData");
+    setSession(null);
   };
 
   // Create a stable context value to prevent unnecessary re-renders
   const contextValue = React.useMemo(() => ({
     user,
-    isAuthenticated: !!user,
+    isAuthenticated: !!user && !!session,
     loading,
     login,
+    signUp,
     loginWithGoogle,
     logout
-  }), [user, loading]);
+  }), [user, session, loading]);
 
   return (
     <AuthContext.Provider value={contextValue}>
